@@ -259,6 +259,8 @@ def main():
 
     global RUN_MODE
     RUN_MODE = "testnet" if (args.live and args.testnet) else "live" if args.live else "paper"
+    if not args.live and os.getenv("DATA_SOURCE", "bybit").lower() == "okx":
+        RUN_MODE = "paper-okx"       # paper record priced off OKX, not Bybit
 
     if args.live:
         from broker_bybit import LiveBroker

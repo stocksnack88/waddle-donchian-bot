@@ -21,6 +21,10 @@ CACHE_DIR.mkdir(exist_ok=True)
 #  3) honour BYBIT_BASE if you point it at a proxy
 BYBIT = os.getenv("BYBIT_BASE", "https://api.bybit.com")
 _BYBIT_HOSTS = [BYBIT, "https://api.bytick.com", "https://api.bybit.com"]
+
+# DATA_SOURCE=okx routes fetches through OKX instead (Bybit blocks some
+# datacenter IPs, e.g. GitHub Actions). Same XLM/XRP perps, ~few bps apart.
+_SOURCE = os.getenv("DATA_SOURCE", "bybit").lower()
 _UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
@@ -80,6 +84,10 @@ def fetch_ohlcv(
     [open, high, low, close, volume]. Cached to parquet; incremental refresh
     on subsequent calls (only fetches bars newer than the cache).
     """
+    if _SOURCE == "okx":
+        from datasrc_okx import okx_ohlcv
+        return okx_ohlcv(symbol, timeframe, days=days, force=force)
+
     if timeframe not in _TF_MAP:
         raise ValueError(f"unsupported timeframe {timeframe!r}; pick from {list(_TF_MAP)}")
 
@@ -163,6 +171,10 @@ def _klines_to_df(rows: list[list]) -> pd.DataFrame:
 
 def fetch_funding(symbol: str, days: int = 540, *, force: bool = False) -> pd.DataFrame:
     """Return DataFrame indexed by UTC timestamp with a single 'funding_rate' column."""
+    if _SOURCE == "okx":
+        from datasrc_okx import okx_funding
+        return okx_funding(symbol, days=days, force=force)
+
     path = _cache_path("funding", symbol, "8h")
     if path.exists() and not force:
         return pd.read_parquet(path)
@@ -206,6 +218,10 @@ def fetch_instrument(symbol: str, *, force: bool = False, category: str = "linea
     Cached to .cache/instrument_<SYM>.json.
     """
     import json
+
+    if _SOURCE == "okx":
+        from datasrc_okx import okx_instrument
+        return okx_instrument(symbol, force=force)
 
     sym = _norm_symbol(symbol)
     path = CACHE_DIR / f"instrument_{sym}.json"
