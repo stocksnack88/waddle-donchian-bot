@@ -1,0 +1,9 @@
+# Railway build config. Python 3.11 (code is 3.9-compatible; 3.11 is current & fast).
+[phases.setup]
+nixPkgs = ["python311", "gcc"]
+
+[phases.install]
+cmds = ["pip install --no-cache-dir -r requirements.txt"]
+
+[start]
+cmd = "python bot.py --poll 45"

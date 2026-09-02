@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.cache/
+*.parquet
+paper_trades.jsonl
+bot_state.json
+bot.log
+.DS_Store
+.venv/
