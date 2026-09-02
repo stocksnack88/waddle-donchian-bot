@@ -147,6 +147,11 @@ def load_paper() -> PaperBroker:
                 headers={"apikey": key, "Authorization": f"Bearer {key}",
                          "Accept": "application/json"}, timeout=8,
             )
+            if r.status_code == 404:
+                print("  [state] !! Supabase 404 — table 'waddle_bot_state' not found. "
+                      "WADDLE_SUPABASE_URL must point to the project where you ran "
+                      "supabase_paper_trades.sql. Nothing will be logged until fixed.")
+                return PaperBroker()
             r.raise_for_status()
             rows = r.json() if r.text.strip() else []
             if rows and rows[0].get("state"):
