@@ -46,6 +46,33 @@ launchctl start com.waddle.donchianbot
 # stop:  launchctl unload ~/Library/LaunchAgents/com.waddle.donchianbot.plist
 ```
 
+### Or run it on Railway (always-on, off your laptop)
+
+This folder is a self-contained git repo with `requirements.txt`, `Procfile`,
+`nixpacks.toml` and `railway.json` — Railway needs nothing else.
+
+**First, the trade log has to go to Supabase** (Railway wipes its disk on every
+deploy — state is restored from `waddle_bot_state`, see below). Run
+`supabase_paper_trades.sql` in the notes Supabase project.
+
+**Push the repo:**
+```bash
+cd ~/crypto-backtest/research
+gh repo create waddle-donchian-bot --private --source=. --remote=origin --push
+```
+
+**On railway.app:** New Project → Deploy from GitHub → pick `waddle-donchian-bot`.
+It auto-detects the config. Then in the service's **Variables** tab add:
+
+| var | value |
+|---|---|
+| `WADDLE_SUPABASE_URL` | `https://<project>.supabase.co` |
+| `WADDLE_SUPABASE_KEY` | the notes project's service-role key |
+
+Deploy. Logs tab shows the same `equity $…` heartbeat every 45s. State survives
+redeploys via Supabase; every trade lands in `waddle_paper_trades` for the
+dashboard. Railway needs a paid/hobby plan (~$5/mo) to run 24/7.
+
 ## 2. Live on Bybit — testnet first
 
 1. Create a Bybit **testnet** account (testnet.bybit.com), fund it with faucet USDT.
