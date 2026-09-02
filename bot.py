@@ -144,12 +144,15 @@ def load_paper() -> PaperBroker:
         try:
             r = httpx.get(
                 f"{url.rstrip('/')}/rest/v1/waddle_bot_state?id=eq.1&select=state",
-                headers={"apikey": key, "Authorization": f"Bearer {key}"}, timeout=8,
+                headers={"apikey": key, "Authorization": f"Bearer {key}",
+                         "Accept": "application/json"}, timeout=8,
             )
-            rows = r.json()
+            r.raise_for_status()
+            rows = r.json() if r.text.strip() else []
             if rows and rows[0].get("state"):
                 print("  [state] restored from Supabase")
                 return PaperBroker(**rows[0]["state"])
+            print("  [state] no prior state in Supabase — starting fresh")
         except Exception as e:  # noqa: BLE001
             print(f"  (state restore skipped: {e})")
     return PaperBroker()

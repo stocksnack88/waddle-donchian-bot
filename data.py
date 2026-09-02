@@ -5,6 +5,7 @@ No API key needed - all endpoints used here are public market data.
 """
 from __future__ import annotations
 
+import os
 import time
 from pathlib import Path
 
@@ -14,7 +15,31 @@ import pandas as pd
 CACHE_DIR = Path(__file__).parent / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
-BYBIT = "https://api.bybit.com"
+# Bybit geo-/bot-blocks some datacenter IPs with a Cloudflare 403. Mitigations:
+#  1) send a browser-ish User-Agent (fixes most CF blocks)
+#  2) try the alternate domain api.bytick.com
+#  3) honour BYBIT_BASE if you point it at a proxy
+BYBIT = os.getenv("BYBIT_BASE", "https://api.bybit.com")
+_BYBIT_HOSTS = [BYBIT, "https://api.bytick.com", "https://api.bybit.com"]
+_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+
+
+def _bybit_get(client: httpx.Client, path: str, params: dict) -> dict:
+    """GET {host}{path} trying each Bybit host; return parsed JSON of the first that works."""
+    seen: set[str] = set()
+    last_err: Exception | None = None
+    for host in _BYBIT_HOSTS:
+        if host in seen:
+            continue
+        seen.add(host)
+        try:
+            r = client.get(f"{host}{path}", params=params, headers={"User-Agent": _UA})
+            r.raise_for_status()
+            return r.json()
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+    raise RuntimeError(f"all Bybit hosts failed for {path}: {last_err}")
 
 # our timeframe string -> Bybit v5 "interval" value
 _TF_MAP = {
@@ -101,19 +126,14 @@ def _paginate_klines(symbol, interval, start_ms, end_ms, category, timeframe) ->
     cursor_end = end_ms
     with httpx.Client(timeout=20) as client:
         while cursor_end > start_ms:
-            r = client.get(
-                f"{BYBIT}/v5/market/kline",
-                params={
-                    "category": category,
-                    "symbol": symbol,
-                    "interval": interval,
-                    "start": start_ms,
-                    "end": cursor_end,
-                    "limit": 1000,
-                },
-            )
-            r.raise_for_status()
-            payload = r.json()
+            payload = _bybit_get(client, "/v5/market/kline", {
+                "category": category,
+                "symbol": symbol,
+                "interval": interval,
+                "start": start_ms,
+                "end": cursor_end,
+                "limit": 1000,
+            })
             if payload.get("retCode") != 0:
                 raise RuntimeError(f"Bybit error: {payload.get('retMsg')}")
             batch = payload["result"]["list"]  # newest first
@@ -154,12 +174,10 @@ def fetch_funding(symbol: str, days: int = 540, *, force: bool = False) -> pd.Da
     cursor_end = end_ms
     with httpx.Client(timeout=20) as client:
         while cursor_end > start_ms:
-            r = client.get(
-                f"{BYBIT}/v5/market/funding/history",
-                params={"category": "linear", "symbol": sym, "endTime": cursor_end, "limit": 200},
-            )
-            r.raise_for_status()
-            lst = r.json()["result"]["list"]  # newest first
+            payload = _bybit_get(client, "/v5/market/funding/history",
+                                 {"category": "linear", "symbol": sym,
+                                  "endTime": cursor_end, "limit": 200})
+            lst = payload["result"]["list"]  # newest first
             if not lst:
                 break
             out.extend(lst)
@@ -195,10 +213,9 @@ def fetch_instrument(symbol: str, *, force: bool = False, category: str = "linea
         return json.loads(path.read_text())
 
     with httpx.Client(timeout=20) as client:
-        r = client.get(f"{BYBIT}/v5/market/instruments-info",
-                       params={"category": category, "symbol": sym})
-        r.raise_for_status()
-        d = r.json()["result"]["list"][0]
+        payload = _bybit_get(client, "/v5/market/instruments-info",
+                             {"category": category, "symbol": sym})
+        d = payload["result"]["list"][0]
     lot, price, lev = d["lotSizeFilter"], d["priceFilter"], d["leverageFilter"]
     out = {
         "symbol": sym,
