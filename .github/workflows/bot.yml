@@ -1,0 +1,34 @@
+name: donchian-bot
+
+# Runs one poll of the paper bot every 15 minutes. State lives in Supabase
+# (waddle_bot_state), so each run restores, does one step, and saves back —
+# no persistent host needed.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"      # every 15 min (GitHub may delay a few min under load)
+  workflow_dispatch:             # lets you trigger a run by hand from the Actions tab
+
+concurrency:
+  group: donchian-bot
+  cancel-in-progress: false      # queue overlapping runs, never kill one mid-write
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - run: pip install --no-cache-dir -r requirements.txt
+
+      - name: one poll
+        env:
+          WADDLE_SUPABASE_URL: ${{ secrets.WADDLE_SUPABASE_URL }}
+          WADDLE_SUPABASE_KEY: ${{ secrets.WADDLE_SUPABASE_KEY }}
+        run: python bot.py --once
