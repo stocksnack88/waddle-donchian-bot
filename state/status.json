@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-03T14:54:41.055567+00:00",
+  "updated_at": "2026-09-03T18:24:23.405411+00:00",
   "start_equity": 50.0,
   "closed_trades": 0,
   "wins": 0,
@@ -7,11 +7,24 @@
   "net_pnl": 0,
   "equity": 50.0,
   "return_pct": 0.0,
-  "open_positions": [],
+  "open_positions": [
+    {
+      "symbol": "XLMUSDT",
+      "side": 1,
+      "entry": 0.186033,
+      "opened": "2026-09-03T12:00:00+00:00"
+    },
+    {
+      "symbol": "XRPUSDT",
+      "side": 1,
+      "entry": 1.46133,
+      "opened": "2026-09-03T12:00:00+00:00"
+    }
+  ],
   "last_trade_at": null,
   "recent_trades": [],
   "bot_state_seen_candles": {
-    "XLMUSDT": "2026-09-03 08:00:00",
-    "XRPUSDT": "2026-09-03 08:00:00"
+    "XLMUSDT": "2026-09-03 12:00:00",
+    "XRPUSDT": "2026-09-03 12:00:00"
   }
 }
