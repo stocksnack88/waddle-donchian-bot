@@ -108,11 +108,13 @@ def okx_ohlcv(symbol: str, timeframe: str = "4h", days: int = 120, *, force: boo
 
 
 def _rows_to_df(rows: list[list]) -> pd.DataFrame:
+    # Keep ALL candles including the still-forming one as the last row, to match
+    # Bybit's behaviour — bot.py drops the last row to get closed candles. The
+    # cache dedup (keep="last") replaces the forming candle once it confirms.
     cols = ["open", "high", "low", "close", "volume"]
     if not rows:
         return pd.DataFrame(columns=cols).rename_axis("ts")
     df = pd.DataFrame(rows, columns=["ts", "o", "h", "l", "c", "vol", "volCcy", "volQuote", "confirm"])
-    df = df[df["confirm"] == "1"]                 # closed candles only
     df["ts"] = pd.to_datetime(df["ts"].astype("int64"), unit="ms")
     for src, dst in zip(["o", "h", "l", "c", "vol"], cols):
         df[dst] = df[src].astype("float64")
