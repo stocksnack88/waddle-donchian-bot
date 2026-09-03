@@ -1,22 +1,24 @@
 name: donchian-bot
 
-# Runs one poll of the paper bot every 15 minutes. State lives in Supabase
-# (waddle_bot_state), so each run restores, does one step, and saves back —
-# no persistent host needed.
+# GitHub throttles scheduled workflows (often ~1-3h between fires on free repos),
+# so instead of one check per fire, each run is a ~5.5h polling loop. When it
+# times out, the next scheduled fire restarts it -> near-continuous coverage.
+# State lives in Supabase (waddle_bot_state); the concurrency group stops two
+# loops ever overlapping.
 
 on:
   schedule:
-    - cron: "*/15 * * * *"      # every 15 min (GitHub may delay a few min under load)
-  workflow_dispatch:             # lets you trigger a run by hand from the Actions tab
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
 
 concurrency:
   group: donchian-bot
-  cancel-in-progress: false      # queue overlapping runs, never kill one mid-write
+  cancel-in-progress: false
 
 jobs:
   poll:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -26,9 +28,9 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: one poll
+      - name: run polling loop (~5.5h, then exit for the next fire)
         env:
-          DATA_SOURCE: okx                 # Bybit 403s GitHub runner IPs; OKX serves the same perps
+          DATA_SOURCE: okx
           WADDLE_SUPABASE_URL: ${{ secrets.WADDLE_SUPABASE_URL }}
           WADDLE_SUPABASE_KEY: ${{ secrets.WADDLE_SUPABASE_KEY }}
-        run: python bot.py --once
+        run: timeout 20000 python bot.py --poll 120 || true
