@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-09-03T10:51:46.129139+00:00",
+  "updated_at": "2026-09-03T14:54:41.055567+00:00",
   "start_equity": 50.0,
   "closed_trades": 0,
   "wins": 0,
@@ -11,7 +11,7 @@
   "last_trade_at": null,
   "recent_trades": [],
   "bot_state_seen_candles": {
-    "XLMUSDT": "2026-09-03 04:00:00",
-    "XRPUSDT": "2026-09-03 04:00:00"
+    "XLMUSDT": "2026-09-03 08:00:00",
+    "XRPUSDT": "2026-09-03 08:00:00"
   }
 }
